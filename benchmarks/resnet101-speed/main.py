@@ -129,8 +129,8 @@ def parse_devices(ctx: Any, param: Any, value: Optional[str]) -> List[int]:
 @click.option(
     '--epochs', '-e',
     type=int,
-    default=10,
-    help='Number of epochs (default: 10)',
+    default=5,
+    help='Number of epochs (default: 5)',
 )
 @click.option(
     '--skip-epochs', '-k',

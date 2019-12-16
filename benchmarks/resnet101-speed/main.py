@@ -20,15 +20,13 @@ Experiment = Callable[[nn.Module, List[int]], Stuffs]
 class Experiments:
 
     @staticmethod
-    def baseline(model: nn.Module, devices: List[int]) -> Stuffs:
-        batch_size = 118
+    def baseline(model: nn.Module, devices: List[int], batch_size=118) -> Stuffs:
         device = devices[0]
         model.to(device)
         return model, batch_size, [torch.device(device)]
 
     @staticmethod
-    def pipeline1(model: nn.Module, devices: List[int]) -> Stuffs:
-        batch_size = 220
+    def pipeline1(model: nn.Module, devices: List[int], batch_size=220) -> Stuffs:
         chunks = 2
         balance = [370]
 
@@ -37,8 +35,7 @@ class Experiments:
         return model, batch_size, list(model.devices)
 
     @staticmethod
-    def pipeline2(model: nn.Module, devices: List[int]) -> Stuffs:
-        batch_size = 25000
+    def pipeline2(model: nn.Module, devices: List[int],batch_size=25000) -> Stuffs:
         chunks = 1667
         balance = [135, 235]
 
@@ -47,8 +44,7 @@ class Experiments:
         return model, batch_size, list(model.devices)
 
     @staticmethod
-    def pipeline4(model: nn.Module, devices: List[int]) -> Stuffs:
-        batch_size = 5632
+    def pipeline4(model: nn.Module, devices: List[int], batch_size=5632) -> Stuffs:
         chunks = 256
         balance = [44, 92, 124, 110]
 
@@ -57,14 +53,29 @@ class Experiments:
         return model, batch_size, list(model.devices)
 
     @staticmethod
-    def pipeline8(model: nn.Module, devices: List[int]) -> Stuffs:
-        batch_size = 5400
+    def pipeline8(model: nn.Module, devices: List[int], batch_size=5400) -> Stuffs:
         chunks = 150
         balance = [26, 22, 33, 44, 44, 66, 66, 69]
 
         model = cast(nn.Sequential, model)
         model = GPipe(model, balance, devices=devices, chunks=chunks)
         return model, batch_size, list(model.devices)
+
+    @staticmethod
+    def dp2(model: nn.Module, devices: List[int], batch_size=256) -> Stuffs:
+        devices = [devices[0], devices[1]]
+        model.to(devices[0])
+        model = nn.DataParallel(model, device_ids=devices, output_device=devices[-1])
+
+        return model, batch_size, [torch.device(device) for device in devices]
+
+    @staticmethod
+    def dp4(model: nn.Module, devices: List[int], batch_size=256) -> Stuffs:
+        devices = [devices[0], devices[1],devices[2],devices[3]]
+        model.to(devices[0])
+        model = nn.DataParallel(model, device_ids=devices, output_device=devices[-1])
+
+        return model, batch_size, [torch.device(device) for device in devices]
 
 
 EXPERIMENTS: Dict[str, Experiment] = {
@@ -73,6 +84,8 @@ EXPERIMENTS: Dict[str, Experiment] = {
     'pipeline-2': Experiments.pipeline2,
     'pipeline-4': Experiments.pipeline4,
     'pipeline-8': Experiments.pipeline8,
+    'dp2': Experiments.dp2,
+    'dp4': Experiments.dp4,
 }
 
 
@@ -135,11 +148,17 @@ def parse_devices(ctx: Any, param: Any, value: Optional[str]) -> List[int]:
     callback=parse_devices,
     help='Device IDs to use (default: all CUDA devices)',
 )
+@click.option(
+    '--batch-size', '-b',
+    default = 16,
+    help='Number of mini-batch-size (default=16)' 
+)
 def cli(ctx: click.Context,
         experiment: str,
         epochs: int,
         skip_epochs: int,
         devices: List[int],
+        batch_size: int,
         ) -> None:
     """ResNet-101 Speed Benchmark"""
     if skip_epochs >= epochs:
@@ -149,7 +168,7 @@ def cli(ctx: click.Context,
 
     f = EXPERIMENTS[experiment]
     try:
-        model, batch_size, _devices = f(model, devices)
+        model, batch_size, _devices = f(model, devices, batch_size)
     except ValueError as exc:
         # Examples:
         #   ValueError: too few devices to hold given partitions (devices: 1, paritions: 2)

@@ -20,7 +20,7 @@ Experiment = Callable[[nn.Module, List[int]], Stuffs]
 class Experiments:
 
     @staticmethod
-    def baseline(model: nn.Module, devices: List[int], batch_size=118) -> Stuffs:
+    def baseline(model: nn.Module, devices: List[int], batch_size=118, chunks=None) -> Stuffs:
         device = devices[0]
         model.to(device)
         return model, batch_size, [torch.device(device)]

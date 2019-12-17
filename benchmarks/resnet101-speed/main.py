@@ -154,6 +154,11 @@ def parse_devices(ctx: Any, param: Any, value: Optional[str]) -> List[int]:
     default = 16,
     help='Number of chunks (default=16)'
 )
+@click.option(
+    '--dataset-size','-dataset_size',
+    default=50000,
+    help="Number of samples(dataset-size)"
+)
 def cli(ctx: click.Context,
         experiment: str,
         epochs: int,
@@ -161,6 +166,7 @@ def cli(ctx: click.Context,
         devices: List[int],
         batch_size: int,
         chunks: int,
+        dataset_size: int,
         ) -> None:
     """ResNet-101 Speed Benchmark"""
     if skip_epochs >= epochs:
@@ -185,7 +191,6 @@ def cli(ctx: click.Context,
     # This experiment cares about only training speed, rather than accuracy.
     # To eliminate any overhead due to data loading, we use fake random 224x224
     # images over 1000 labels.
-    dataset_size = 50000
 
     input = torch.rand(batch_size, 3, 224, 224, device=in_device)
     target = torch.randint(1000, (batch_size,), device=out_device)
